@@ -1,12 +1,13 @@
 import { Todo } from "../models/todo.js";
+import { fileManager } from "../utils/files.js"
 
 class todoController {
     constructor() {
-        // hold todo objects in array
         this.TODOS = []
+        this.initTodos()
     }
 
-    createTodo(req, res) {
+    async createTodo(req, res) {
         // get data from Post request
         const task = req.body.task
         // create new object via Todo model
@@ -14,6 +15,8 @@ class todoController {
         const newTodo = new Todo(Math.random().toString(), task)
         // add new todo to todos array
         this.TODOS.push(newTodo)
+        // save data to file
+        await fileManager.writeFile('./data/todos.json', this.TODOS)
         // create a correct response
         res.json({
             message: 'created new todo object',
@@ -21,11 +24,20 @@ class todoController {
         })
     }
 
-    getTodos(req, res) {
-        res.json({ tasks: this.TODOS })
+    async initTodos(){
+        const todosData = await fileManager.readFile('./data/todos.json')
+        // if data is ok - add file content to array
+        if(todosData !==  null){
+            this.TODOS = todosData 
+        } else {
+            this.TODOS = [] // if we do not get data from file create an empty array
+        }
+    }
+    getTodos(req, res){
+        res.json({tasks: this.TODOS})
     }
 
-    updateTodo(req, res) {
+    async updateTodo(req, res) {
         // get id form url params
         const todoId = req.params.id
         // get the updated task name form request body (like form data)
@@ -43,6 +55,10 @@ class todoController {
         // for update create element with the same id and new task
         // and save it in the same array element by this index
         this.TODOS[todoIndex] = new Todo(this.TODOS[todoIndex].id, updatedTask)
+
+         // Save updated data to file
+         await fileManager.writeFile('./data/todos.json', this.TODOS);
+
         // show updated info
         res.json({
             message: 'Updated todo',
@@ -50,7 +66,7 @@ class todoController {
         })
     }
 
-    deleteTodo(req, res) {
+    async deleteTodo(req, res) {
         const todoId = req.params.id
         const todoIndex = this.TODOS.findIndex((todo) => todo.id === todoId)
 
@@ -62,6 +78,9 @@ class todoController {
         }
         // if id is ok - delete Todo
         const deleteTodo = this.TODOS.splice(todoIndex, 1)[0];
+
+        await fileManager.writeFile('./data/todos.json', this.TODOS);
+
         res.json({
             message: 'Deleted todo',
             deleteTask: deleteTodo
